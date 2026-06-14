@@ -7,6 +7,11 @@
   const savePatchState = () => localStorage.setItem(stateKey, JSON.stringify(state));
 
   const pieces = ['🌸', '🍋', '🍫', '🌙', '🍓', '🌿'];
+  const duelSkills = [
+    { icon: '🌸', name: 'Bloom Strike', bonus: 32, reward: 'coins' },
+    { icon: '🌙', name: 'Moon Shield', bonus: 24, reward: 'gems' },
+    { icon: '🐝', name: 'Bee Rush', bonus: 28, reward: 'seeds' }
+  ];
 
   function notify(message) {
     const toast = $('#toast');
@@ -48,34 +53,198 @@
     }
   }
 
+  function ensureDuelPanel() {
+    const duel = $('#duel');
+    const log = $('#duelLog');
+    if (!duel || !log || $('#duelPowerPanel')) return;
+
+    const panel = document.createElement('div');
+    panel.id = 'duelPowerPanel';
+    panel.style.marginTop = '16px';
+    panel.innerHTML = `
+      <div class="card" style="padding:14px;margin-top:14px">
+        <h3 style="margin-bottom:8px">⚡ Duel Powers</h3>
+        <p style="margin-bottom:10px">Alege o abilitate înainte de Battle. Fiecare schimbă șansele și recompensa.</p>
+        <div class="row" id="duelSkills"></div>
+        <div class="progress" style="margin-top:12px"><i id="duelEnergy" style="width:100%"></i></div>
+        <p id="duelRoundInfo" style="margin-top:8px">Energy: 100 · Win streak: 0</p>
+      </div>
+    `;
+    log.insertAdjacentElement('afterend', panel);
+
+    const skillWrap = $('#duelSkills');
+    duelSkills.forEach((skill, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn' + (index === 0 ? ' primary' : '');
+      button.textContent = `${skill.icon} ${skill.name}`;
+      button.dataset.skill = String(index);
+      button.addEventListener('click', () => {
+        state.selectedDuelSkill = index;
+        savePatchState();
+        $$('#duelSkills .btn').forEach(btn => btn.classList.remove('primary'));
+        button.classList.add('primary');
+        notify(`${skill.name} pregătit ${skill.icon}`);
+      });
+      skillWrap.append(button);
+    });
+  }
+
+  function updateDuelHud() {
+    const energy = state.duelEnergy ?? 100;
+    const streak = state.duelStreak ?? 0;
+    const energyBar = $('#duelEnergy');
+    const info = $('#duelRoundInfo');
+    if (energyBar) energyBar.style.width = `${Math.max(0, Math.min(100, energy))}%`;
+    if (info) info.textContent = `Energy: ${energy} · Win streak: ${streak}`;
+  }
+
   function fixDuel() {
+    ensureDuelPanel();
+    updateDuelHud();
     const button = $('#duelBtn');
     if (!button || button.dataset.modeFixBound) return;
     button.dataset.modeFixBound = 'true';
+    button.textContent = 'Battle ⚔️';
+
     button.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
+
+      state.duelEnergy = state.duelEnergy ?? 100;
+      if (state.duelEnergy < 15) {
+        notify('Energy prea mică. Primești +35 energy pentru restart.');
+        state.duelEnergy += 35;
+      }
 
       const playerBoard = $('#pMini');
       const aiBoard = $('#aMini');
       miniBoard(playerBoard);
       miniBoard(aiBoard);
 
+      const selected = duelSkills[state.selectedDuelSkill ?? 0] || duelSkills[0];
       const currentScore = readNumber('score');
-      const playerScore = Math.round(80 + Math.random() * 180 + currentScore / 5);
-      const aiScore = Math.round(75 + Math.random() * 190);
+      const streak = state.duelStreak ?? 0;
+      const energyBonus = Math.round((state.duelEnergy || 0) / 5);
+      const playerScore = Math.round(90 + Math.random() * 150 + currentScore / 6 + selected.bonus + streak * 8 + energyBonus);
+      const aiScore = Math.round(95 + Math.random() * 190 + Math.max(0, streak - 1) * 10);
       const won = playerScore >= aiScore;
+
+      state.duelEnergy = Math.max(0, (state.duelEnergy || 100) - 15 + (won ? 8 : 3));
+      state.duelStreak = won ? streak + 1 : 0;
+      savePatchState();
 
       if ($('#pDuel')) $('#pDuel').textContent = playerScore;
       if ($('#aDuel')) $('#aDuel').textContent = aiScore;
+
+      const reward = won
+        ? selected.reward === 'gems'
+          ? { coins: 40, gems: 1, xp: 28 }
+          : selected.reward === 'seeds'
+            ? { coins: 45, seeds: 30, xp: 26 }
+            : { coins: 75, xp: 24 }
+        : { xp: 10, seeds: 5 };
+
+      addResources(reward);
+      updateDuelHud();
+
       if ($('#duelLog')) {
-        $('#duelLog').innerHTML = won
-          ? '✅ Ai câștigat duelul! +60 coins, +20 XP'
-          : '🤖 Garden AI a câștigat. +8 XP pentru participare.';
+        const rewardText = Object.entries(reward).filter(([, v]) => v).map(([k, v]) => `+${v} ${k}`).join(', ');
+        $('#duelLog').innerHTML = `
+          <b>${won ? '✅ Victory!' : '🤖 Garden AI countered!'}</b><br>
+          Skill: ${selected.icon} ${selected.name}<br>
+          ${won ? 'Combo-ul tău a spart apărarea AI.' : 'AI a blocat ultima mutare, dar ai câștigat experiență.'}<br>
+          Reward: ${rewardText}<br>
+          ${state.duelStreak ? `🔥 Win streak: ${state.duelStreak}` : 'Streak reset.'}
+        `;
       }
-      addResources(won ? { coins: 60, xp: 20 } : { xp: 8 });
-      notify(won ? 'Duel câștigat ⚔️' : 'Duel pierdut, dar ai primit XP');
+      notify(won ? `${selected.name}: victorie ⚔️` : 'Duel pierdut, dar ai progres');
     }, true);
+  }
+
+  function fixStory() {
+    const story = $('#story');
+    const speaker = $('#speaker');
+    const text = $('#dialogText');
+    const next = $('#nextStory');
+    if (!story || !speaker || !text || !next) return;
+
+    if (!$('#storyQuestPanel')) {
+      const panel = document.createElement('div');
+      panel.id = 'storyQuestPanel';
+      panel.className = 'card';
+      panel.style.marginTop = '14px';
+      panel.innerHTML = `
+        <h3>🌿 Story Quest</h3>
+        <p id="storyQuestText">Capitolul curent deblochează mici recompense și direcții pentru modurile de joc.</p>
+        <div class="progress"><i id="storyProgress"></i></div>
+        <div class="row" style="margin-top:12px">
+          <button type="button" class="btn primary" id="storyChoiceA">Ajută grădina 🌸</button>
+          <button type="button" class="btn" id="storyChoiceB">Urmărește indiciul 🔎</button>
+          <button type="button" class="btn warn" id="storyRewardBtn">Claim chapter reward</button>
+        </div>
+      `;
+      story.append(panel);
+    }
+
+    const chapters = [
+      { speaker: 'Flora', icon: '👩‍🌾', text: 'Greenhouse-ul pierde lumină. Fă match-uri de flori pentru a reaprinde rădăcinile magice.', reward: { seeds: 18, xp: 8 }, quest: 'Quest: câștigă un nivel Match sau folosește Hint o dată.' },
+      { speaker: 'Luna', icon: '🧚‍♀️', text: 'În Moon Garden, fiecare combo deschide o poartă invizibilă. Ai nevoie de curaj și energie.', reward: { gems: 1, xp: 12 }, quest: 'Quest: intră în Duel și folosește o abilitate.' },
+      { speaker: 'Bee', icon: '🐝', text: 'Bzz! Indiciile din Escape formează un cod. Nu toate obiectele sunt doar decor.', reward: { coins: 45, xp: 10 }, quest: 'Quest: găsește cel puțin un indiciu în Escape.' },
+      { speaker: 'Kiko', icon: '🐶', text: 'Companionii nu sunt doar colecții. Selectează un pet activ pentru bonus de aventură.', reward: { coins: 25, seeds: 15 }, quest: 'Quest: intră în Pets și selectează un companion.' },
+      { speaker: 'Mira', icon: '🐱', text: 'Grădina devine mai puternică atunci când o decorezi. Fiecare obiect spune o poveste.', reward: { seeds: 35, xp: 10 }, quest: 'Quest: intră în Decor și plantează ceva.' }
+    ];
+
+    function renderChapter() {
+      const index = state.storyChapter ?? 0;
+      const chapter = chapters[index % chapters.length];
+      speaker.textContent = `${chapter.icon} ${chapter.speaker}`;
+      text.textContent = chapter.text;
+      const progress = $('#storyProgress');
+      const questText = $('#storyQuestText');
+      if (progress) progress.style.width = `${((index % chapters.length) + 1) / chapters.length * 100}%`;
+      if (questText) questText.textContent = chapter.quest;
+      next.textContent = index >= chapters.length - 1 ? 'Replay story' : 'Next chapter';
+    }
+
+    if (!story.dataset.modeFixStoryBound) {
+      story.dataset.modeFixStoryBound = 'true';
+      next.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        state.storyChapter = ((state.storyChapter ?? 0) + 1) % chapters.length;
+        savePatchState();
+        renderChapter();
+        notify('Capitol nou deblocat 📖');
+      }, true);
+
+      $('#storyChoiceA')?.addEventListener('click', () => {
+        addResources({ seeds: 8, xp: 4 });
+        notify('Ai ales să ajuți grădina: +8 seeds, +4 XP 🌸');
+      });
+
+      $('#storyChoiceB')?.addEventListener('click', () => {
+        addResources({ coins: 12, xp: 4 });
+        notify('Ai urmărit indiciul: +12 coins, +4 XP 🔎');
+      });
+
+      $('#storyRewardBtn')?.addEventListener('click', () => {
+        const index = state.storyChapter ?? 0;
+        const key = `storyReward_${index}`;
+        if (state[key]) {
+          notify('Recompensa capitolului a fost deja luată.');
+          return;
+        }
+        const reward = chapters[index % chapters.length].reward;
+        addResources(reward);
+        state[key] = true;
+        savePatchState();
+        const label = Object.entries(reward).map(([k, v]) => `+${v} ${k}`).join(', ');
+        notify(`Story reward: ${label} 📖`);
+      });
+    }
+
+    renderChapter();
   }
 
   function fixDaily() {
@@ -242,6 +411,7 @@
 
   function refreshMode(mode) {
     fixDaily();
+    if (mode === 'story') fixStory();
     if (mode === 'duel') fixDuel();
     if (mode === 'escape') fixEscape();
     if (mode === 'pets') fixPets();
@@ -301,6 +471,7 @@
 
     fixDaily();
     fixDuel();
+    fixStory();
     const current = document.querySelector('[data-screen].on, [data-screen].active')?.dataset.screen || 'hub';
     showMode(current);
   }
