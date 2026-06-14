@@ -55,5 +55,6 @@ function renderLeader(){let l=$('#leader');if(!l)return;let rows=[['🥇',S.prof
 function confetti(){let c=$('#fx'),ctx=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;let ps=Array.from({length:80},()=>({x:Math.random()*c.width,y:-20,vx:(Math.random()-.5)*5,vy:Math.random()*5+3,s:Math.random()*6+3,a:1,col:['#ff85c2','#ffe066','#5effa0','#87e8ff','#7c6fff'][Math.floor(Math.random()*5)]}));let n=0;(function anim(){ctx.clearRect(0,0,c.width,c.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.06;p.a-=.01;ctx.globalAlpha=Math.max(0,p.a);ctx.fillStyle=p.col;ctx.fillRect(p.x,p.y,p.s,p.s)});ctx.globalAlpha=1;if(n++<120)requestAnimationFrame(anim);else ctx.clearRect(0,0,c.width,c.height)})()}
 start();sync();if(!S.profileDone)setTimeout(()=>openProfile(true),300);else if(!S.tutorialDone)setTimeout(startTutorial,500);
 </script>
+  <script src="mode-fix.js"></script>
 </body>
 </html>
