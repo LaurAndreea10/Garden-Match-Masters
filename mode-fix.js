@@ -2090,9 +2090,6 @@ function showTutStep(idx){
   $('tut-title').textContent=step.title;
   $('tut-desc').textContent=step.desc;
   $('tut-next-btn').textContent=idx===TUT_STEPS.length-1?'Să jucăm! 🌸':'Înainte →';
-  // dots
-  const dots=$('tut-dots');dots.innerHTML='';
-  TUT_STEPS.forEach((_,i)=>{const d=document.createElement('div');d.className='tut-dot'+(i===idx?' on':'');dots.appendChild(d);});
   // highlight target
   const hl=$('tut-highlight'),tt=$('tut-tooltip');
   $('tut-overlay').classList.remove('hidden');hl.classList.remove('hidden');tt.classList.remove('hidden');
