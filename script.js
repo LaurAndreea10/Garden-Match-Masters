@@ -48,11 +48,29 @@
     return Array.from(document.querySelectorAll(selector));
   }
 
+  function hardHide(el) {
+    if (!el) return;
+    el.classList.add('hidden', 'h');
+    el.classList.remove('on', 'show');
+    el.setAttribute('aria-hidden', 'true');
+    el.style.pointerEvents = 'none';
+    el.style.display = 'none';
+  }
+
+  function hardShow(el) {
+    if (!el) return;
+    el.classList.remove('hidden', 'h');
+    el.removeAttribute('aria-hidden');
+    el.style.pointerEvents = '';
+    el.style.display = '';
+  }
+
   function toast(message) {
     const el = id('tst') || id('toast');
     if (!el) return;
     el.textContent = message;
     el.classList.add('on', 'show');
+    el.style.display = '';
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => el.classList.remove('on', 'show'), 2200);
   }
@@ -85,12 +103,10 @@
     const prevGender = id('prev-gender');
 
     if (hubName) hubName.textContent = name;
-    if (hubAvatar) hubAvatar.childNodes[0].nodeValue = avatar;
+    if (hubAvatar && hubAvatar.childNodes[0]) hubAvatar.childNodes[0].nodeValue = avatar;
     if (prevAv) prevAv.textContent = avatar;
     if (prevName) prevName.textContent = name;
-    if (prevGender) {
-      prevGender.textContent = game.gender === 'f' ? 'Grădinăriță' : game.gender === 'm' ? 'Grădinar' : 'Neutru';
-    }
+    if (prevGender) prevGender.textContent = game.gender === 'f' ? 'Grădinăriță' : game.gender === 'm' ? 'Grădinar' : 'Neutru';
     const input = id('profile-name');
     if (input && !input.value) input.value = name;
   }
@@ -136,8 +152,14 @@
     const modal = id('profile-modal');
     if (!modal) return;
     modal.classList.remove('h');
+    modal.style.display = 'flex';
+    modal.style.pointerEvents = '';
     renderAvatarGrid();
     syncProfile();
+  }
+
+  function closeProfile() {
+    hardHide(id('profile-modal'));
   }
 
   function updateProfilePreview() {
@@ -173,8 +195,7 @@
   function saveProfile() {
     updateProfilePreview();
     game.profileDone = true;
-    const modal = id('profile-modal');
-    if (modal) modal.classList.add('h');
+    closeProfile();
     syncProfile();
     save();
     toast('Profil salvat 🌸');
@@ -187,9 +208,9 @@
     const step = tutorialSteps[game.tutorialStep] || tutorialSteps[0];
 
     if (!overlay || !tooltip) return;
-    overlay.classList.remove('hidden', 'h');
-    tooltip.classList.remove('hidden', 'h');
-    if (highlight) highlight.classList.add('hidden');
+    hardShow(overlay);
+    hardShow(tooltip);
+    if (highlight) hardHide(highlight);
 
     const stepEl = id('tut-step');
     const titleEl = id('tut-title');
@@ -212,27 +233,23 @@
   }
 
   function closeTutorial() {
-    const overlay = id('tut-overlay');
-    const tooltip = id('tut-tooltip');
-    const highlight = id('tut-highlight');
-    [overlay, tooltip, highlight].forEach((el) => {
-      if (el) {
-        el.classList.add('hidden');
-        el.classList.add('h');
-        el.style.pointerEvents = 'none';
-      }
-    });
-    setTimeout(() => {
-      [overlay, tooltip, highlight].forEach((el) => {
-        if (el) el.style.pointerEvents = '';
-      });
-    }, 250);
+    hardHide(id('tut-overlay'));
+    hardHide(id('tut-tooltip'));
+    hardHide(id('tut-highlight'));
+  }
+
+  function closeAllIntroOverlays() {
+    closeTutorial();
+    closeProfile();
+    const modal = id('modal');
+    if (modal) hardHide(modal);
   }
 
   function skipTutorial() {
     game.tutorialDone = true;
+    game.profileDone = true;
     game.tutorialStep = 0;
-    closeTutorial();
+    closeAllIntroOverlays();
     save();
     toast('Tutorial închis. Hai la joc! 🌸');
     sw('story');
@@ -374,6 +391,7 @@
   safeStub('startTutorial', startTutorial);
   safeStub('nextTutStep', nextTutStep);
   safeStub('skipTutorial', skipTutorial);
+  safeStub('closeTutorial', closeTutorial);
   safeStub('startDaily', startDaily);
   safeStub('startDuel', startDuel);
   safeStub('renderPets', renderPets);
@@ -382,18 +400,12 @@
   safeStub('renderStats', renderStats);
   ['nextRoom', 'submitCode', 'downloadGardenScreenshot', 'showSettings', 'toggleSound', 'toggleMusic', 'toggleReducedMotion'].forEach((name) => safeStub(name));
 
-  function boot() {
-    document.documentElement.dataset.theme = game.theme;
-    document.documentElement.dataset.lang = game.lang;
-    syncProfile();
-    syncResources();
-    renderAvatarGrid();
-    initDuelBoards();
-
+  function bindTutorialButtons() {
     const next = id('tut-next-btn');
     const skip = qs('.tut-skip');
     if (next) {
       next.type = 'button';
+      next.onclick = null;
       next.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -401,17 +413,44 @@
       }, true);
     }
     if (skip) {
+      skip.onclick = null;
       skip.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         skipTutorial();
       }, true);
     }
+  }
 
+  function bindProfileCancel() {
+    document.querySelectorAll('button').forEach((button) => {
+      if ((button.textContent || '').trim().toLowerCase().includes('anulează')) {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          closeProfile();
+        }, true);
+      }
+    });
+  }
+
+  function boot() {
+    document.documentElement.dataset.theme = game.theme;
+    document.documentElement.dataset.lang = game.lang;
+    syncProfile();
+    syncResources();
+    renderAvatarGrid();
+    initDuelBoards();
+    bindTutorialButtons();
+    bindProfileCancel();
+
+    if (!game.profileDone) {
+      setTimeout(openProfile, 200);
+    }
     if (!game.tutorialDone) {
-      setTimeout(startTutorial, 250);
+      setTimeout(startTutorial, 350);
     } else {
-      closeTutorial();
+      closeAllIntroOverlays();
     }
   }
 
