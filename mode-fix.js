@@ -2090,6 +2090,8 @@ function showTutStep(idx){
   $('tut-title').textContent=step.title;
   $('tut-desc').textContent=step.desc;
   $('tut-next-btn').textContent=idx===TUT_STEPS.length-1?'Să jucăm! 🌸':'Înainte →';
+  clearTimeout(window._tutAutoClose);
+  if(idx===TUT_STEPS.length-1){window._tutAutoClose=setTimeout(endTutorial,3000);}
   // highlight target
   const hl=$('tut-highlight'),tt=$('tut-tooltip');
   $('tut-overlay').classList.remove('hidden');hl.classList.remove('hidden');tt.classList.remove('hidden');
@@ -2111,6 +2113,7 @@ function centerTooltip(tt){tt.style.top='50%';tt.style.left='50%';tt.style.trans
 function nextTutStep(){sfxClick();tutStep++;if(tutStep>=TUT_STEPS.length){endTutorial();}else{showTutStep(tutStep);}}
 function skipTutorial(){endTutorial();}
 function endTutorial(){
+  clearTimeout(window._tutAutoClose);
   tutDone=true;localStorage.setItem('gmm_tutDone','1');
   $('tut-overlay').classList.add('hidden');$('tut-highlight').classList.add('hidden');$('tut-tooltip').classList.add('hidden');
   $('tut-tooltip').style.transform='';$('tut-tooltip').style.top='';$('tut-tooltip').style.left='';
