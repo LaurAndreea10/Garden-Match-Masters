@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Garden Match Masters — joc match-3 cu atmosferă de grădină, combo-uri, misiuni și interfață bilingvă RO/EN." />
+  <title>Garden Match Masters</title>
+  <style>
+    :root {
+      --bg: #07140e;
+      --bg-2: #0f2b1b;
+      --card: rgba(255, 255, 255, 0.1);
+      --card-strong: rgba(255, 255, 255, 0.16);
+      --text: #f4fff7;
+      --muted: #b8d8c4;
+      --accent: #8dfc7b;
+      --accent-2: #ffd166;
+      --danger: #ff6b6b;
+      --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      --radius: 24px;
+      --tile: 56px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(141, 252, 123, 0.22), transparent 32%),
+        radial-gradient(circle at 85% 20%, rgba(255, 209, 102, 0.16), transparent 30%),
+        linear-gradient(135deg, var(--bg), var(--bg-2));
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, black, transparent 90%);
+      pointer-events: none;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: start;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 6vw, 5.2rem);
+      line-height: 0.9;
+      margin: 0;
+      letter-spacing: -0.06em;
+      max-width: 760px;
+    }
+
+    .lead {
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.7;
+      margin: 18px 0 0;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    button, select {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 16px;
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+      transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+
+    button:hover, select:hover { transform: translateY(-2px); background: rgba(255,255,255,0.18); }
+    button:focus-visible, select:focus-visible, .tile:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; }
+    select option { color: #102016; }
+
+    .primary {
+      background: linear-gradient(135deg, var(--accent), #41d96a);
+      color: #06230f;
+      box-shadow: 0 12px 32px rgba(104, 255, 128, 0.22);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(280px, 380px) 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel, .board-wrap {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .panel { padding: 20px; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .stat strong { display: block; font-size: 1.5rem; margin-top: 3px; }
+
+    .mission {
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(141,252,123,0.13), rgba(255,209,102,0.12));
+      border: 1px solid rgba(255,255,255,0.14);
+      margin-bottom: 16px;
+    }
+
+    .mission h2 { margin: 0 0 10px; font-size: 1rem; }
+    .mission p, .tips p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+    .progress {
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.25);
+      margin-top: 14px;
+    }
+
+    .bar {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width .25s ease;
+    }
+
+    .tips {
+      display: grid;
+      gap: 10px;
+      font-size: .95rem;
+    }
+
+    .board-wrap {
+      padding: clamp(14px, 3vw, 28px);
+      display: grid;
+      place-items: center;
+      min-height: 620px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, var(--tile));
+      gap: 8px;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .tile {
+      width: var(--tile);
+      height: var(--tile);
+      display: grid;
+      place-items: center;
+      font-size: calc(var(--tile) * 0.52);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08));
+      box-shadow: inset 0 -7px 16px rgba(0,0,0,0.22), 0 8px 18px rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.18);
+      cursor: pointer;
+      transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+    }
+
+    .tile:hover { transform: translateY(-3px) scale(1.02); }
+    .tile.selected { box-shadow: 0 0 0 4px var(--accent-2), inset 0 -7px 16px rgba(0,0,0,0.22); transform: scale(1.06); }
+    .tile.match { animation: pop .26s ease forwards; }
+    .tile.hint { animation: hint 1s ease-in-out infinite; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.72);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: var(--shadow);
+      transition: .25s ease;
+      z-index: 5;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @keyframes pop { to { transform: scale(.2) rotate(12deg); opacity: 0; filter: blur(2px); } }
+    @keyframes hint { 50% { transform: translateY(-4px); box-shadow: 0 0 0 4px rgba(255,209,102,.42); } }
+
+    @media (max-width: 880px) {
+      header, main { grid-template-columns: 1fr; }
+      .toolbar { justify-content: flex-start; }
+      .board-wrap { min-height: auto; }
+      :root { --tile: min(10.1vw, 52px); }
+      .board { gap: 6px; }
+      .tile { border-radius: 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <div class="eyebrow" data-i18n="eyebrow">Arcade garden puzzle</div>
+        <h1>Garden Match Masters</h1>
+        <p class="lead" data-i18n="lead">Potrivește flori, fructe și frunze, construiește combo-uri și salvează grădina înainte să se termine mutările.</p>
+      </div>
+      <div class="toolbar" aria-label="Game controls">
+        <select id="lang" aria-label="Language">
+          <option value="ro">Română</option>
+          <option value="en">English</option>
+        </select>
+        <button id="hintBtn" type="button" data-i18n="hint">Indiciu</button>
+        <button id="newBtn" type="button" class="primary" data-i18n="newGame">Joc nou</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel" aria-label="Game information">
+        <div class="stats">
+          <div class="stat"><span data-i18n="score">Scor</span><strong id="score">0</strong></div>
+          <div class="stat"><span data-i18n="moves">Mutări</span><strong id="moves">25</strong></div>
+          <div class="stat"><span data-i18n="combo">Combo</span><strong id="combo">x1</strong></div>
+          <div class="stat"><span data-i18n="best">Record</span><strong id="best">0</strong></div>
+        </div>
+
+        <div class="mission">
+          <h2 data-i18n="missionTitle">Misiune</h2>
+          <p id="missionText">Adună 18 elemente de grădină pentru a completa nivelul.</p>
+          <div class="progress" aria-label="Mission progress"><div class="bar" id="bar"></div></div>
+        </div>
+
+        <div class="tips">
+          <p data-i18n="tip1">🌼 Selectează două piese vecine pentru a le schimba.</p>
+          <p data-i18n="tip2">🍓 Liniile de 3+ dispar și aduc puncte.</p>
+          <p data-i18n="tip3">🌿 Combo-urile cresc multiplicatorul.</p>
+        </div>
+      </section>
+
+      <section class="board-wrap" aria-label="Match 3 board">
+        <div id="board" class="board" role="grid" aria-label="Garden Match Masters board"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const SIZE = 8;
+    const START_MOVES = 25;
+    const TARGET = 18;
+    const ITEMS = ["🌼", "🍓", "🌿", "🍄", "🥕", "🌻"];
+    const boardEl = document.querySelector("#board");
+    const scoreEl = document.querySelector("#score");
+    const movesEl = document.querySelector("#moves");
+    const comboEl = document.querySelector("#combo");
+    const bestEl = document.querySelector("#best");
+    const barEl = document.querySelector("#bar");
+    const missionText = document.querySelector("#missionText");
+    const toastEl = document.querySelector("#toast");
+    const langEl = document.querySelector("#lang");
+
+    const copy = {
+      ro: {
+        eyebrow: "Arcade garden puzzle",
+        lead: "Potrivește flori, fructe și frunze, construiește combo-uri și salvează grădina înainte să se termine mutările.",
+        hint: "Indiciu",
+        newGame: "Joc nou",
+        score: "Scor",
+        moves: "Mutări",
+        combo: "Combo",
+        best: "Record",
+        missionTitle: "Misiune",
+        mission: done => `Adună ${TARGET} elemente de grădină. Progres: ${done}/${TARGET}.`,
+        tip1: "🌼 Selectează două piese vecine pentru a le schimba.",
+        tip2: "🍓 Liniile de 3+ dispar și aduc puncte.",
+        tip3: "🌿 Combo-urile cresc multiplicatorul.",
+        invalid: "Mutare fără potrivire. Încearcă altă combinație.",
+        win: "Nivel complet! Grădina este salvată 🌱",
+        lose: "Ai rămas fără mutări. Încearcă din nou!",
+        noHint: "Nu am găsit indiciu rapid. Amestecă prin Joc nou."
+      },
+      en: {
+        eyebrow: "Arcade garden puzzle",
+        lead: "Match flowers, fruit and leaves, build combos, and rescue the garden before you run out of moves.",
+        hint: "Hint",
+        newGame: "New game",
+        score: "Score",
+        moves: "Moves",
+        combo: "Combo",
+        best: "Best",
+        missionTitle: "Mission",
+        mission: done => `Collect ${TARGET} garden pieces. Progress: ${done}/${TARGET}.`,
+        tip1: "🌼 Select two neighbour tiles to swap them.",
+        tip2: "🍓 Lines of 3+ disappear and score points.",
+        tip3: "🌿 Combos increase the multiplier.",
+        invalid: "No match. Try another swap.",
+        win: "Level complete! The garden is safe 🌱",
+        lose: "No moves left. Try again!",
+        noHint: "No quick hint found. Start a new game to reshuffle."
+      }
+    };
+
+    let lang = localStorage.getItem("gmm-lang") || "ro";
+    let grid = [];
+    let selected = null;
+    let score = 0;
+    let moves = START_MOVES;
+    let combo = 1;
+    let collected = 0;
+    let locked = false;
+    let best = Number(localStorage.getItem("gmm-best") || 0);
+
+    function randomItem() { return ITEMS[Math.floor(Math.random() * ITEMS.length)]; }
+    function indexOf(row, col) { return row * SIZE + col; }
+    function pos(index) { return { row: Math.floor(index / SIZE), col: index % SIZE }; }
+    function isNeighbour(a, b) {
+      const pa = pos(a), pb = pos(b);
+      return Math.abs(pa.row - pb.row) + Math.abs(pa.col - pb.col) === 1;
+    }
+
+    function makeGrid() {
+      grid = Array.from({ length: SIZE * SIZE }, (_, i) => {
+        let value;
+        do { value = randomItem(); }
+        while (
+          (i % SIZE >= 2 && grid[i - 1] === value && grid[i - 2] === value) ||
+          (i >= SIZE * 2 && grid[i - SIZE] === value && grid[i - SIZE * 2] === value)
+        );
+        return value;
+      });
+    }
+
+    function render() {
+      boardEl.innerHTML = "";
+      grid.forEach((item, index) => {
+        const tile = document.createElement("button");
+        tile.className = "tile" + (selected === index ? " selected" : "");
+        tile.type = "button";
+        tile.setAttribute("role", "gridcell");
+        tile.setAttribute("aria-label", `Tile ${index + 1}: ${item}`);
+        tile.textContent = item;
+        tile.addEventListener("click", () => choose(index));
+        boardEl.appendChild(tile);
+      });
+      updateUi();
+    }
+
+    function updateUi() {
+      scoreEl.textContent = score;
+      movesEl.textContent = moves;
+      comboEl.textContent = `x${combo}`;
+      bestEl.textContent = best;
+      barEl.style.width = `${Math.min(100, (collected / TARGET) * 100)}%`;
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.dataset.i18n;
+        if (typeof copy[lang][key] === "string") el.textContent = copy[lang][key];
+      });
+      missionText.textContent = copy[lang].mission(Math.min(collected, TARGET));
+      langEl.value = lang;
+    }
+
+    function choose(index) {
+      if (locked || moves <= 0 || collected >= TARGET) return;
+      if (selected === null) { selected = index; render(); return; }
+      if (selected === index) { selected = null; render(); return; }
+      if (!isNeighbour(selected, index)) { selected = index; render(); return; }
+      swap(selected, index);
+      const matches = findMatches();
+      if (!matches.size) {
+        swap(selected, index);
+        selected = null;
+        combo = 1;
+        moves--;
+        render();
+        toast(copy[lang].invalid);
+        checkEnd();
+        return;
+      }
+      selected = null;
+      moves--;
+      resolveMatches(matches);
+    }
+
+    function swap(a, b) { [grid[a], grid[b]] = [grid[b], grid[a]]; }
+
+    function findMatches() {
+      const matched = new Set();
+      for (let row = 0; row < SIZE; row++) {
+        let streak = 1;
+        for (let col = 1; col <= SIZE; col++) {
+          const current = col < SIZE ? grid[indexOf(row, col)] : null;
+          const prev = grid[indexOf(row, col - 1)];
+          if (current === prev) streak++;
+          else {
+            if (streak >= 3) for (let k = col - streak; k < col; k++) matched.add(indexOf(row, k));
+            streak = 1;
+          }
+        }
+      }
+      for (let col = 0; col < SIZE; col++) {
+        let streak = 1;
+        for (let row = 1; row <= SIZE; row++) {
+          const current = row < SIZE ? grid[indexOf(row, col)] : null;
+          const prev = grid[indexOf(row - 1, col)];
+          if (current === prev) streak++;
+          else {
+            if (streak >= 3) for (let k = row - streak; k < row; k++) matched.add(indexOf(k, col));
+            streak = 1;
+          }
+        }
+      }
+      return matched;
+    }
+
+    function resolveMatches(matches) {
+      locked = true;
+      matches.forEach(i => boardEl.children[i]?.classList.add("match"));
+      setTimeout(() => {
+        const count = matches.size;
+        score += count * 12 * combo;
+        collected += count;
+        combo++;
+        best = Math.max(best, score);
+        localStorage.setItem("gmm-best", String(best));
+        matches.forEach(i => grid[i] = null);
+        collapse();
+        render();
+        const next = findMatches();
+        if (next.size) resolveMatches(next);
+        else {
+          locked = false;
+          combo = Math.max(1, combo - 1);
+          updateUi();
+          checkEnd();
+        }
+      }, 240);
+    }
+
+    function collapse() {
+      for (let col = 0; col < SIZE; col++) {
+        const values = [];
+        for (let row = SIZE - 1; row >= 0; row--) {
+          const value = grid[indexOf(row, col)];
+          if (value) values.push(value);
+        }
+        for (let row = SIZE - 1; row >= 0; row--) {
+          grid[indexOf(row, col)] = values.shift() || randomItem();
+        }
+      }
+    }
+
+    function checkEnd() {
+      if (collected >= TARGET) toast(copy[lang].win);
+      else if (moves <= 0) toast(copy[lang].lose);
+    }
+
+    function toast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add("show");
+      clearTimeout(toastEl.timer);
+      toastEl.timer = setTimeout(() => toastEl.classList.remove("show"), 2200);
+    }
+
+    function findHint() {
+      document.querySelectorAll(".tile.hint").forEach(el => el.classList.remove("hint"));
+      for (let i = 0; i < grid.length; i++) {
+        const { row, col } = pos(i);
+        const neighbours = [];
+        if (col < SIZE - 1) neighbours.push(indexOf(row, col + 1));
+        if (row < SIZE - 1) neighbours.push(indexOf(row + 1, col));
+        for (const j of neighbours) {
+          swap(i, j);
+          const ok = findMatches().size > 0;
+          swap(i, j);
+          if (ok) {
+            boardEl.children[i].classList.add("hint");
+            boardEl.children[j].classList.add("hint");
+            return;
+          }
+        }
+      }
+      toast(copy[lang].noHint);
+    }
+
+    function newGame() {
+      score = 0;
+      moves = START_MOVES;
+      combo = 1;
+      collected = 0;
+      selected = null;
+      locked = false;
+      makeGrid();
+      render();
+    }
+
+    document.querySelector("#newBtn").addEventListener("click", newGame);
+    document.querySelector("#hintBtn").addEventListener("click", findHint);
+    langEl.addEventListener("change", e => {
+      lang = e.target.value;
+      localStorage.setItem("gmm-lang", lang);
+      document.documentElement.lang = lang;
+      updateUi();
+    });
+
+    document.documentElement.lang = lang;
+    newGame();
+  </script>
+</body>
+</html>
