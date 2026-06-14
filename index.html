@@ -58,5 +58,6 @@ function renderRoadmap(){let r=[['✅','Profile + Tutorial','Implemented'],['✅
 function renderLeader(){$('#leader').innerHTML=`<div class="mini"><b>🥇 ${S.profile.name}</b><p>${S.best} pts</p></div><div class="mini"><b>🥈 Mira</b><p>1200 pts</p></div><div class="mini"><b>🥉 Kiko</b><p>880 pts</p></div>`}function renderQuick(){$('#quickGoals').innerHTML=['Completează un match','Câștigă un duel','Găsește codul 2413','Deblochează un pet'].map(x=>`<div class="mini"><p>${x}</p></div>`).join('')}$('#dailyBtn').onclick=()=>{let today=new Date().toISOString().slice(0,10);if(S.dailyDate===today){toast('Already claimed today ✓');return}S.dailyDate=today;add({coins:150,gems:2,seeds:25,xp:15});toast('Daily claimed 🎁')};
 newGame();renderStory();renderDuel();renderEscape();renderDecor();renderPets();renderShop();renderAch();renderMemory();renderEvents();renderWall();renderRoadmap();sync();if(!S.profileDone)setTimeout(openProfile,300);else if(!S.tutorialDone)setTimeout(startTutorial,500);
 </script>
+  <script src="mode-fix.js"></script>
 </body>
 </html>
