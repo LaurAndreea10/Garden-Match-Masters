@@ -2079,9 +2079,9 @@ const TUT_STEPS=[
   {title:'Animăluțe 🐾',desc:'Salvează animăluțe din niveluri și hrănește-le pentru a evolua! Fiecare are 3 stadii de evoluție.',target:'[data-m="pets"]',pos:'top'},
   {title:'Gata de joc! 🌸',desc:'Acum știi tot ce ai nevoie. Mult succes în reconstruirea grădinii tale magice! Joacă primul nivel pentru a câștiga animăluțul Sirop! 🐠',target:null,pos:'center'},
 ];
-let tutStep=0,tutDone=false;
+let tutStep=0,tutDone=localStorage.getItem('gmm_tutDone')==='1';
 function startTutorial(){
-  tutDone=false;tutStep=0;showTutStep(0);
+  tutDone=false;localStorage.removeItem('gmm_tutDone');tutStep=0;showTutStep(0);
 }
 function showTutStep(idx){
   if(idx>=TUT_STEPS.length){endTutorial();return;}
@@ -2114,7 +2114,7 @@ function centerTooltip(tt){tt.style.top='50%';tt.style.left='50%';tt.style.trans
 function nextTutStep(){sfxClick();tutStep++;if(tutStep>=TUT_STEPS.length){endTutorial();}else{showTutStep(tutStep);}}
 function skipTutorial(){endTutorial();}
 function endTutorial(){
-  tutDone=true;
+  tutDone=true;localStorage.setItem('gmm_tutDone','1');
   $('tut-overlay').classList.add('hidden');$('tut-highlight').classList.add('hidden');$('tut-tooltip').classList.add('hidden');
   $('tut-tooltip').style.transform='';$('tut-tooltip').style.top='';$('tut-tooltip').style.left='';
   toast('✅ Tutorial finalizat! Mult succes!');
