@@ -1,0 +1,37 @@
+name: Inject mode fix
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inject:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inject mode-fix script
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'index.html';
+          let html = fs.readFileSync(path, 'utf8');
+          if (!html.includes('mode-fix.js')) {
+            html = html.replace(/<\/body>/i, '  <script src="mode-fix.js"></script>\n</body>');
+            fs.writeFileSync(path, html);
+          }
+          NODE
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html mode-fix.js
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Load robust mode navigation fix"
+            git push
+          fi
